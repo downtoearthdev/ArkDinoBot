@@ -52,10 +52,6 @@ public class DiscordListener extends ListenerAdapter {
 
         }
 
-        if (event.getMessage().getContentRaw().split(" ")[0].equalsIgnoreCase(".register") && event.getTextChannel().equals(ArkDinoBot.getInstance().getFulfilChannel())) {
-
-        }
-
         if (event.getMessage().getContentRaw().split(" ")[0].equalsIgnoreCase(".accept") && event.getChannel().equals(ArkDinoBot.getInstance().getFulfilChannel())) {
             String[] args = event.getMessage().getContentRaw().split(" ");
             if (args.length == 2) {

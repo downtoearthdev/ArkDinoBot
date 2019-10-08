@@ -121,10 +121,12 @@ public class ArkDinoBot {
                     String creature = Util.getDinoAndAmount(embed.getDescription()).split(" ")[1];
                     Integer amount = Integer.parseInt(Util.getDinoAndAmount(embed.getDescription()).split(" ")[0]);
                     BreedRequest req = new BreedRequest(id, creature, amount);
-                    req.setBreeder(fulfilChannel.getGuild().getMembersByName(embed.getFooter().getText().split(" ")[2], true).get(0).getId());
+                    if(embed.getFooter() != null) {
+                        req.setBreeder(fulfilChannel.getGuild().getMembersByName(embed.getFooter().getText().split(" ")[2], true).get(0).getId());
+                        req.getBreeder().getUser().openPrivateChannel().complete().sendMessage("<@" + req.getRequester().getId() + ">'s request for " + req.getAmount() + " " + req.getCreature() + " was just reloaded. If you had a timer set for this, please set it again for the appropriate time left!").queue();
+                    }
                     req.setMsgId(msg.getId());
                     req.start();
-                    req.getBreeder().getUser().openPrivateChannel().complete().sendMessage("<@" + req.getRequester().getId() + ">'s request for " + req.getAmount() + " " + req.getCreature() + " was just reloaded. If you had a timer set for this, please set it again for the appropriate time left!").queue();
                     number++;
                 }
             }

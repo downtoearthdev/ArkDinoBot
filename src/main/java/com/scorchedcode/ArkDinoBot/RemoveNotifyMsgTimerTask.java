@@ -17,7 +17,7 @@ public class RemoveNotifyMsgTimerTask extends TimerTask {
 
     @Override
     public void run() {
-        if(msg.getEmbeds().size() > 0 && msg.getEmbeds().get(0).getTitle().contains("Request")) {
+        if(msg.getEmbeds().size() > 0 && msg.getEmbeds().get(0).getTitle() != null && msg.getEmbeds().get(0).getTitle().contains("Request")) {
             for(BreedRequest req : BreedRequest.requests) {
                 if(req.getMsgId().equals(msg.getId()) && req.getBreeder() != null) {
                     return;
@@ -28,7 +28,7 @@ public class RemoveNotifyMsgTimerTask extends TimerTask {
     }
 
     public static void sendNotice(String text, TextChannel channel, int expiration) {
-        Message notifyMsg = channel.sendMessage(new EmbedBuilder().setTitle("Notice").setDescription(text).setFooter("Expires in " + String.valueOf(expiration * 60 * 1000) + " minutes.").build()).complete();
+        Message notifyMsg = channel.sendMessage(new EmbedBuilder().setTitle("Notice").setDescription(text).setFooter("Expires in " + String.valueOf(expiration) + " minutes.").build()).complete();
         new Timer().schedule(new RemoveNotifyMsgTimerTask(notifyMsg), expiration * 60 * 1000);
     }
 

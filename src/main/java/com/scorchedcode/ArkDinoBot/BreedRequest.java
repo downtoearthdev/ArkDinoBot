@@ -113,7 +113,7 @@ public class BreedRequest implements Serializable {
     }
 
     public void start() {
-        new Timer().schedule(new RemoveNotifyMsgTimerTask(ArkDinoBot.getInstance().getFulfilChannel().getHistoryAround(msgId, 5).complete().getMessageById(msgId)), 1440);
+        new Timer().schedule(new RemoveNotifyMsgTimerTask(ArkDinoBot.getInstance().getFulfilChannel().getHistoryAround(msgId, 5).complete().getMessageById(msgId)), 1440000);
     }
 
 
