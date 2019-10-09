@@ -11,6 +11,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.*;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -24,6 +25,8 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 public class DiscordListener extends ListenerAdapter {
 
@@ -187,7 +190,8 @@ public class DiscordListener extends ListenerAdapter {
                     .addField(".unregister", "Removes yourself as a breeder (or the specified breeder if the command user is an owner.\nUsage: .unregister <username>", false)
                     .addField(".registerdinos", "Registers additional creatures you breed\nUsage: .registerdinos dino1,dino2,dino3,etc", false)
                     .addField(".setstat", "Sets a high stat for a creature, you must be registered to breed the creature.\nUsage: .setstat Dino_Name (first letter of stat ie. health is h, food is f, damage is d, movement is m)#\nExample: .setstat Spinosaur h500 s200 f1000", false)
-                    .addField(".breeding", "Use Crumplecorn's calculator", false);
+                    .addField(".breeding", "Use Crumplecorn's calculator", false)
+                    .addField(".statcalc", "Use the DoDoDex stat calculator", false);
             event.getChannel().sendMessage(eb.build()).queue();
         }
         if (event.getMessage().getContentRaw().split(" ")[0].equalsIgnoreCase(".liststats")) {
@@ -464,6 +468,70 @@ public class DiscordListener extends ListenerAdapter {
                 }
             }
         }*/
+        if(event.getMessage().getContentRaw().split(" ")[0].equalsIgnoreCase(".statcalc")) {
+            String[] args = event.getMessage().getContentRaw().split(" ");
+            if (args.length == 1) {
+                EmbedBuilder eb = new EmbedBuilder();
+                eb.setTitle("Stat Calculator Help")
+                        .addField("Syntax:", ".statcalc Dino Name level <options...>", false)
+                        .addField("Options:", "", false)
+                        .addField("w#", "Set the weight stat", true)
+                        .addField("o#", "Set the oxygen stat", true)
+                        .addField("f#", "Set the food stat", true)
+                        .addField("s#", "Set the stamina stat", true)
+                        .addField("m#", "Set the melee stat", true)
+                        .addField("h#", "Set the health stat", true)
+                        .setDescription("If any options are omitted, default values will be used.");
+                event.getChannel().sendMessage(eb.build()).queue();
+            }
+            else if(args.length >= 3) {
+                CopyOnWriteArrayList<String> flags = new CopyOnWriteArrayList<>();
+                for(int x = 2; x < args.length; x++) {
+                    switch (args[x].substring(0, 1)) {
+                        case "w":
+                            flags.add("weight="+args[x].substring(1));
+                            break;
+                        case "o":
+                            flags.add("oxygen="+args[x].substring(1));
+                            break;
+                        case "f":
+                            flags.add("food="+args[x].substring(1));
+                            break;
+                        case "s":
+                            flags.add("stamina="+args[x].substring(1));
+                            break;
+                        case "m":
+                            flags.add("melee="+args[x].substring(1));
+                            break;
+                        case "h":
+                            flags.add("health="+args[x].substring(1));
+                            break;
+                        default:
+                    }
+                }
+                /*for (String arg : args) {
+                    if (arg.contains("="))
+                        flags.add(arg);
+                }*/
+                /*String primordialName = "";
+                for (String arg : args) {
+                    if (!flags.contains(arg) && Arrays.asList(args).indexOf(arg) != 2)
+                        primordialName += arg + " ";
+                }
+                String name = primordialName.replaceAll("^.+?\\s", "");*/
+                //System.out.println(name);
+                Message msg = event.getChannel().sendMessage("Calculating...").complete();
+                try {
+                    MessageEmbed embed = getStatCalculatorEmbed(args[1], args[2], flags.toArray(new String[flags.size()]));
+                    event.getChannel().sendMessage(embed).queue();
+                } catch (NumberFormatException e) {
+                    event.getTextChannel().sendMessage("Number values must be whole numbers.").queue();
+                } catch (CreatureNotFoundException e) {
+                    event.getTextChannel().sendMessage(e.getReason()).queue();
+                }
+                msg.delete().complete();
+            }
+        }
         if (event.getMessage().getContentRaw().split(" ")[0].equalsIgnoreCase(".breeding")) {
             String[] args = event.getMessage().getContentRaw().split(" ");
             if (args.length == 1) {
@@ -472,19 +540,48 @@ public class DiscordListener extends ListenerAdapter {
                         .setAuthor("Based on Crumplecorn's Breeding Calculator", "http://ark.crumplecorn.com/breeding/")
                         .addField("Syntax:", ".breeding Dino Name <options...>", false)
                         .addField("Options:", "", false)
-                        .addField("weight=#", "Set the weight", true)
-                        .addField("hatch=#", "Set the hatch multiplier", true)
-                        .addField("mature=#", "Set the mature multiplier", true)
-                        .addField("consume=#", "Set the consume multiplier", true)
-                        .addField("maturation=#", "Set the maturation percentage", true)
-                        .addField("buffer=#", "Set the number of minutes between feedings", true)
-                        .addField("trough=Normal/Tek/Clicker", "Sets the type of trough", true)
-                        .addField("food=Food_Type", "Sets the food type, use _ between spaces (ie. Raw_Meat)", true)
+                        .addField("w#", "Set the weight", true)
+                        .addField("h#", "Set the hatch multiplier", true)
+                        .addField("m#", "Set the mature multiplier", true)
+                        .addField("c#", "Set the consume multiplier", true)
+                        .addField("r#", "Set the maturation percentage", true)
+                        .addField("b#", "Set the number of minutes between feedings", true)
+                        .addField("tNormal/Tek/Clicker", "Sets the type of trough", true)
+                        .addField("fFood_Type", "Sets the food type, use _ between spaces (ie. Raw_Meat)", true)
                         .setDescription("If any options are omitted, default values will be used.");
                 event.getChannel().sendMessage(eb.build()).queue();
             } else if (args.length >= 2) {
                 CopyOnWriteArrayList<String> flags = new CopyOnWriteArrayList<>();
-                for (String arg : args) {
+                for(int x = 2; x < args.length; x++) {
+                        switch (args[x].substring(0, 1)) {
+                            case "w":
+                                flags.add("weight="+args[x].substring(1));
+                                break;
+                            case "h":
+                                flags.add("hatch="+args[x].substring(1));
+                                break;
+                            case "m":
+                                flags.add("mature="+args[x].substring(1));
+                                break;
+                            case "c":
+                                flags.add("consume="+args[x].substring(1));
+                                break;
+                            case "r":
+                                flags.add("maturation="+args[x].substring(1));
+                                break;
+                            case "b":
+                                flags.add("buffer="+args[x].substring(1));
+                                break;
+                            case "t":
+                                flags.add("trough="+args[x].substring(1));
+                                break;
+                            case "f":
+                                flags.add("food="+args[x].substring(1));
+                                break;
+                            default:
+                        }
+                }
+                /*for (String arg : args) {
                     if (arg.contains("="))
                         flags.add(arg);
                 }
@@ -492,18 +589,20 @@ public class DiscordListener extends ListenerAdapter {
                 for (String arg : args) {
                     if (!flags.contains(arg))
                         primordialName += arg + " ";
-                }
-                String name = primordialName.replaceAll("^.+?\\s", "");
-                System.out.println(name);
+                }*/
+                //String name = primordialName.replaceAll("^.+?\\s", "");
+                //System.out.println(name);
                 Message msg = event.getChannel().sendMessage("Calculating...").complete();
                 try {
-                    MessageEmbed embed = getBreedingEmbed(name.trim(), flags.toArray(new String[flags.size()]));
+                    MessageEmbed embed = getBreedingEmbed(args[1], flags.toArray(new String[flags.size()]));
                     if (embed != null)
                         event.getChannel().sendMessage(embed).queue();
                     else
                         event.getChannel().sendMessage("No creature found with that name!").queue();
                 } catch (NumberFormatException e) {
                     event.getTextChannel().sendMessage("Number values must be whole numbers.").queue();
+                } catch (CreatureNotFoundException e) {
+                    event.getTextChannel().sendMessage(e.getReason()).queue();
                 }
                 msg.delete().complete();
             }
@@ -528,7 +627,103 @@ public class DiscordListener extends ListenerAdapter {
         return convertedHTML;
     }
 
-    private MessageEmbed getBreedingEmbed(String creature, String... flags) throws NumberFormatException {
+    private MessageEmbed getStatCalculatorEmbed(String creature, String level, String... flags) throws NumberFormatException,CreatureNotFoundException {
+        Integer lvl = Integer.parseInt(level);
+        List<String> iterableFlags = Arrays.asList(flags);
+        Integer health = 0, stamina = 0, oxygen = 0, food = 0, melee = 0, weight = 0;
+        for (String flag : flags) {
+            if (flag.contains("health"))
+                health = Integer.valueOf(flag.replaceAll("^\\D+=", ""));
+            else if (flag.contains("stamina"))
+                stamina = Integer.valueOf(flag.replaceAll("^\\D+=", ""));
+            else if (flag.contains("oxgen"))
+                oxygen = Integer.valueOf(flag.replaceAll("^\\D+=", ""));
+            else if (flag.contains("food"))
+                food = Integer.valueOf(flag.replaceAll("^\\D+=", ""));
+            else if (flag.contains("melee"))
+                melee = Integer.valueOf(flag.replaceAll("^\\D+=", ""));
+            else if (flag.contains("weight"))
+                weight = Integer.valueOf(flag.replaceAll("^\\D+=", ""));
+        }
+        CreatureTypes mob = Util.acceptableName(creature);
+        System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--headless"); //So the fucking browser doesn't popup
+        WebDriver driver = new ChromeDriver(options);
+        driver.get("https://www.dododex.com/stat-calculator/" + mob.getFormattedHandle());
+        WebElement creatureInput = driver.findElement(By.cssSelector("#level"));
+        creatureInput.click();
+        creatureInput.sendKeys(Keys.chord(Keys.LEFT_CONTROL, "a"), ""+lvl, Keys.TAB, (health > 0 ? ""+health : Keys.ARROW_RIGHT), Keys.TAB,
+                (stamina > 0 ? ""+stamina : Keys.ARROW_RIGHT), Keys.TAB,
+                (food > 0 ? ""+food : Keys.ARROW_RIGHT), Keys.TAB,
+                (oxygen > 0 ? ""+oxygen : Keys.ARROW_RIGHT), Keys.TAB,
+                (weight > 0 ? ""+weight : Keys.ARROW_RIGHT), Keys.TAB,
+                (melee > 0 ? ""+melee : Keys.ARROW_RIGHT));
+        //driver.manage().timeouts().implicitlyWait(2, TimeUnit.SECONDS);
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setTitle(mob.getFriendlyName() + " Stat Calculator");
+        try {
+            eb.addField(driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(2) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > b")).getText(), driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(2) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > div")).getText() + "\n" +
+                    "Base: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(2) > div:nth-child(3) > span")).getText() + "\n" +
+                    "Included Per Level: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(2) > div:nth-child(4) > span")).getText() + "\n" +
+                    "Points: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(2) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(1) > b")).getText() + " - " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(2) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(2) > span")).getText(), true);
+        }
+        catch (NoSuchElementException e) {
+
+        }
+        try {
+            eb.addField(driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(3) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > b")).getText(), driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(3) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > div")).getText() + "\n" +
+                    "Base: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(3) > div:nth-child(3) > span")).getText() + "\n" +
+                    "Included Per Level: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(3) > div:nth-child(4) > span")).getText() + "\n" +
+                    "Points: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(3) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(1) > b")).getText() + " - " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(3) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(2) > span")).getText(), true);
+        }
+        catch (NoSuchElementException e) {
+
+        }
+        try {
+            eb.addField(driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(4) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > b")).getText(), driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(4) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > div")).getText() + "\n" +
+                    "Base: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(4) > div:nth-child(3) > span")).getText() + "\n" +
+                    "Included Per Level: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(4) > div:nth-child(4) > span")).getText() + "\n" +
+                    "Points: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(4) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(1) > b")).getText() + " - " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(4) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(2) > span")).getText(), true);
+        }
+        catch (NoSuchElementException e) {
+
+        }
+        try {
+            eb.addField(driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(5) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > b")).getText(), driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(5) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > div")).getText() + "\n" +
+                    "Base: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(5) > div:nth-child(3) > span")).getText() + "\n" +
+                    "Included Per Level: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(5) > div:nth-child(4) > span")).getText() + "\n" +
+                    "Points: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(5) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(1) > b")).getText() + " - " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(5) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(2) > span")).getText(), true);
+        }
+        catch (NoSuchElementException e) {
+
+        }
+        try {
+            eb.addField(driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(6) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > b")).getText(), driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(6) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > div")).getText() + "\n" +
+                    "Base: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(6) > div:nth-child(3) > span")).getText() + "\n" +
+                    "Included Per Level: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(6) > div:nth-child(4) > span")).getText() + "\n" +
+                    "Points: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(6) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(1) > b")).getText() + " - " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(6) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(2) > span")).getText(), true);
+        }
+        catch (NoSuchElementException e) {
+
+        }
+        try {
+            eb.addField(driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(7) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > b")).getText(), driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(7) > div.rowItem.white.flex2-5 > div > div.rowItem.white.flex2 > div")).getText()+"\n"+
+                    "Base: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(7) > div:nth-child(3) > span")).getText() + "\n" +
+                    "Included Per Level: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(7) > div:nth-child(4) > span")).getText() + "\n" +
+                    "Points: " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(7) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(1) > b")).getText() + " - " + driver.findElement(By.cssSelector("#content > div > div.lightrows.statCalcTable > div:nth-child(7) > div.rowItem.flex3 > div > div.rowItemN.flex1 > div:nth-child(2) > span")).getText(), true);
+        }
+        catch (NoSuchElementException e) {
+
+        }
+        String imgUrl = driver.findElement(By.cssSelector("#mainImage")).getAttribute("src");
+        eb.setThumbnail(imgUrl);
+        eb.setColor(Color.CYAN);
+        driver.quit();
+        return eb.build();
+    }
+
+    private MessageEmbed getBreedingEmbed(String creature, String... flags) throws NumberFormatException, CreatureNotFoundException {
         List<String> iterableFlags = Arrays.asList(flags);
         Integer weight = 0, hatchMultiplier = 0, matureMultiplier = 0, consumeMultiplier = 0, maturationPercentage = 0, bufferMinutes = 0;
         FoodTypes foodType = FoodTypes.RAW_MEAT;
@@ -551,6 +746,7 @@ public class DiscordListener extends ListenerAdapter {
             else if (flag.contains("trough"))
                 troughTypes = TroughTypes.getFromFriendly(flag.replaceAll("^\\D+=", ""));
         }
+        CreatureTypes mob = Util.acceptableName(creature);
         System.out.println(creature);
         System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
         ChromeOptions options = new ChromeOptions();
@@ -560,7 +756,7 @@ public class DiscordListener extends ListenerAdapter {
         WebElement creaturesDropdown = driver.findElement(By.cssSelector("body > ng-view > div > div > form > div:nth-child(4) > table > tbody > tr:nth-child(1) > td:nth-child(2) > select"));
         boolean pass = false;
         for (WebElement elem : creaturesDropdown.findElements(By.tagName("option"))) {
-            if (elem.getAttribute("label").equalsIgnoreCase(creature))
+            if (elem.getAttribute("label").toLowerCase().contains(creature))
                 pass = true;
         }
         if (pass) {
@@ -569,7 +765,7 @@ public class DiscordListener extends ListenerAdapter {
             creatureInput.sendKeys(creature);
             creatureInput.sendKeys(Keys.TAB, "" + weight, Keys.TAB, foodType.getFriendlyName(), Keys.TAB, "" + hatchMultiplier, Keys.TAB, "" + matureMultiplier, Keys.TAB, "" + consumeMultiplier, Keys.TAB, "" + maturationPercentage, Keys.TAB, "" + bufferMinutes, Keys.TAB, Keys.TAB, troughTypes.getFriendlyName());
             try {
-                (new WebDriverWait(driver, 10)).until((WebDriver d) -> creatureInput.getAttribute("value").equalsIgnoreCase(creature));
+                (new WebDriverWait(driver, 10)).until((WebDriver d) -> creatureInput.getAttribute("value").toLowerCase().contains(creature));
             } catch (TimeoutException e) {
                 return null;
             }
