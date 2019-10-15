@@ -174,7 +174,8 @@ public class DiscordListener extends ListenerAdapter {
                     .addField(".listbreeders", "Lists registered breeders and the creatures they breed.\nUsage: .listbreeders", false)
                     .addField(".listdinos", "Lists creatures that a user breeds.\nUsage: .listdinos DiscordName", false)
                     .addField(".liststats", "Lists highest stats this creature is breeding with\nUsage: .liststats dino", false)
-                    .addField(".taming", "Retrieves useful information on taming a creature.\nUsage: .taming dinoname level tamingmultiplier# consumemultiplier#\n(the multipliers default to 1 if omitted)", false);
+                    .addField(".taming", "Retrieves useful information on taming a creature.\nUsage: .taming dinoname level tamingmultiplier# consumemultiplier#\n(the multipliers default to 1 if omitted)", false)
+                    .addField(".statcalc", "Use the DoDoDex stat calculator", false);
             event.getChannel().sendMessage(eb.build()).queue();
         }
         if (event.getMessage().getContentRaw().split(" ")[0].equalsIgnoreCase(".breederhelp")) {
